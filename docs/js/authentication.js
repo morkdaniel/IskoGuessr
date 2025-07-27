@@ -1,6 +1,3 @@
-// Real Firebase Authentication Functions
-// Replace your current authentication.js with this:
-
 let currentUser = null;
 
 // Initialize auth state listener when the page loads
@@ -162,7 +159,7 @@ async function showLeaderboard() {
   try {
     let scores = [];
     
-    // Try to get real Firebase data
+    // Fetch scores from Firebase
     if (window.db && window.getDocs && window.collection && window.query && window.orderBy && window.limit) {
       console.log('Fetching leaderboard from Firebase...');
       
@@ -187,33 +184,15 @@ async function showLeaderboard() {
       console.log('Fetched scores:', scores);
     }
     
-    // Fallback to mock data if no Firebase data or empty
-    if (scores.length === 0) {
-      console.log('Using mock leaderboard data');
-      scores = [
-        { playerName: 'Maria Santos', score: 24500 },
-        { playerName: 'Juan Dela Cruz', score: 23800 },
-        { playerName: 'Anna Reyes', score: 22900 },
-        { playerName: 'Carlos Manila', score: 21500 },
-        { playerName: 'Sofia Torres', score: 20800 }
-      ];
-    }
-    
+    // Display leaderboard with scores or empty message
     displayLeaderboard(scores);
     
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     
-    // Show mock data on error
-    const mockScores = [
-      { playerName: 'Maria Santos', score: 24500 },
-      { playerName: 'Juan Dela Cruz', score: 23800 },
-      { playerName: 'Anna Reyes', score: 22900 },
-      { playerName: 'Carlos Manila', score: 21500 },
-      { playerName: 'Sofia Torres', score: 12000 }
-    ];
+    // Show empty leaderboard on error
+    displayLeaderboard([]);
     
-    displayLeaderboard(mockScores);
   } finally {
     // Reset button state
     if (leaderboardBtn) {
@@ -231,10 +210,12 @@ async function saveGameScore(finalScore, gameMode = 'uplb') {
   }
   
   try {
-    if (!window.db || !window.addDoc || !window.collection) {
+    if (!window.db || !window.collection || !window.doc || !window.getDoc || !window.setDoc) {
       throw new Error('Firebase Firestore not initialized');
     }
 
+    const scoreRef = window.doc(window.collection(window.db, 'scores'), `${currentUser.uid}_${gameMode}`);
+    const scoreDoc = await window.getDoc(scoreRef);
     const scoreData = {
       userId: currentUser.uid,
       playerName: currentUser.displayName || 'Anonymous',
@@ -243,12 +224,23 @@ async function saveGameScore(finalScore, gameMode = 'uplb') {
       timestamp: new Date(),
       rounds: 5
     };
+
+    if (scoreDoc.exists()) {
+      const existingScore = scoreDoc.data().score;
+      if (finalScore > existingScore) {
+        console.log(`Updating score for ${currentUser.displayName}: ${existingScore} -> ${finalScore}`);
+        await window.setDoc(scoreRef, scoreData);
+        console.log('Score updated successfully');
+      } else {
+        console.log(`New score (${finalScore}) not higher than existing (${existingScore}), skipping update`);
+        return false;
+      }
+    } else {
+      console.log('Saving new score:', scoreData);
+      await window.setDoc(scoreRef, scoreData);
+      console.log('Score saved successfully');
+    }
     
-    console.log('Saving score:', scoreData);
-    
-    await window.addDoc(window.collection(window.db, 'scores'), scoreData);
-    
-    console.log('Score saved successfully');
     return true;
     
   } catch (error) {
@@ -288,27 +280,39 @@ async function endGame() {
   initLoadingScreen();
 }
 
-// Display leaderboard modal (unchanged)
+// Display leaderboard modal
 function displayLeaderboard(scores) {
+  let scoresHTML = '';
+  
+  if (scores.length === 0) {
+    scoresHTML = `
+      <div class="score-entry">
+        <span class="player-name">No one in the leaderboard yet</span>
+      </div>
+    `;
+  } else {
+    scoresHTML = scores.map((score, index) => {
+      const rank = index + 1;
+      const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+      const isCurrentUser = currentUser && score.playerName === currentUser.displayName;
+      return `
+        <div class="score-entry ${isCurrentUser ? 'current-user' : ''}">
+          <div style="display: flex; align-items: center;">
+            <span class="rank-emoji">${emoji}</span>
+            <span class="player-name">${score.playerName}${isCurrentUser ? ' (You)' : ''}</span>
+          </div>
+          <span class="player-score">${score.score.toLocaleString()}</span>
+        </div>
+      `;
+    }).join('');
+  }
+  
   const modalHTML = `
     <div class="leaderboard-modal" id="leaderboard-modal">
       <div class="leaderboard-content">
         <h2 class="leaderboard-title">🏆 Top Iskos</h2>
         <div class="scores-list">
-          ${scores.map((score, index) => {
-            const rank = index + 1;
-            const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
-            const isCurrentUser = currentUser && score.playerName === currentUser.displayName;
-            return `
-              <div class="score-entry ${isCurrentUser ? 'current-user' : ''}">
-                <div style="display: flex; align-items: center;">
-                  <span class="rank-emoji">${emoji}</span>
-                  <span class="player-name">${score.playerName}${isCurrentUser ? ' (You)' : ''}</span>
-                </div>
-                <span class="player-score">${score.score.toLocaleString()}</span>
-              </div>
-            `;
-          }).join('')}
+          ${scoresHTML}
         </div>
         <button onclick="closeLeaderboard()" class="close-modal-btn">
           Close
