@@ -210,7 +210,7 @@ async function showLeaderboard() {
       { playerName: 'Juan Dela Cruz', score: 23800 },
       { playerName: 'Anna Reyes', score: 22900 },
       { playerName: 'Carlos Manila', score: 21500 },
-      { playerName: 'Sofia Torres', score: 20800 }
+      { playerName: 'Sofia Torres', score: 12000 }
     ];
     
     displayLeaderboard(mockScores);
