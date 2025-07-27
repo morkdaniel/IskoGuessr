@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IskoGuessr</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script type="module" src="js/firebase-init.js"></script>
+  <script defer src="js/main.js"></script>
+  <script defer src="js/authentication.js"></script>
+
+  <!-- Google Maps JavaScript API -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxmIdvfesWQtrzg3tj68Z8LfSehawXmSA&callback=initLoadingScreen"
+    defer
+  ></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+
+    #pano {
+      filter: blur(8px) brightness(0.6);
+      transform: scale(1.1);
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Enhanced title styling */
+    .iskoguessr-title {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+      position: relative;
+    }
+
+    .iskoguessr-title::before {
+      content: 'IskoGuessr';
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      z-index: -1;
+      transform: translate(2px, 2px);
+      opacity: 0.3;
+    }
+
+    .iskoguessr-title::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 120%;
+      height: 120%;
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+      transform: translate(-50%, -50%);
+      z-index: -2;
+      animation: glow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+      to { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
+    }
+
+    /* Auth panel styling */
+    .auth-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 20;
+    }
+
+    .google-btn {
+      background: white;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      font-size: 14px;
+    }
+
+    .google-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: white;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .sign-out-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sign-out-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Leaderboard button */
+    .leaderboard-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(251, 191, 36, 0.9);
+      color: black;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 20;
+    }
+
+    .leaderboard-btn:hover {
+      background: rgba(245, 158, 11, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(251, 191, 36, 0.3);
+    }
+
+    /* Leaderboard Modal */
+    .leaderboard-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .leaderboard-content {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .leaderboard-title {
+      color: #fbbf24;
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .score-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      border-left: 4px solid transparent;
+    }
+
+    .score-entry:nth-child(1) { 
+      background: rgba(251, 191, 36, 0.1); 
+      border-left-color: #fbbf24;
+    }
+    .score-entry:nth-child(2) { 
+      background: rgba(156, 163, 175, 0.1); 
+      border-left-color: #9ca3af;
+    }
+    .score-entry:nth-child(3) { 
+      background: rgba(180, 83, 9, 0.1); 
+      border-left-color: #b45309;
+    }
+    .score-entry:hover { 
+      background: rgba(255, 255, 255, 0.05); 
+    }
+
+    .rank-emoji {
+      font-size: 24px;
+      margin-right: 12px;
+    }
+
+    .player-name {
+      color: white;
+      font-weight: 600;
+    }
+
+    .player-score {
+      color: #fbbf24;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .close-modal-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 12px;
+      background: #fbbf24;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: black;
+      transition: all 0.2s ease;
+    }
+
+    .close-modal-btn:hover {
+      background: #f59e0b;
+      transform: translateY(-1px);
+    }
+
+    .draggable-map {
+      position: absolute;
+      z-index: 1000;
+      cursor: move;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .draggable-map:hover {
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+
+    .map-container {
+      width: 350px;
+      height: 350px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .map-header {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+    }
+
+    .close-btn {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .gm-style-cc, 
+    .gmnoprint, 
+    .gm-style-cc span, 
+    .gm-style-cc a {
+      display: none !important;
+    }
+
+    /* Fullscreen street view */
+    #street-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Game UI overlay */
+    .game-ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .score-ui {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .bottom-ui {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      background: #fbbf24;
+      color: black;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f59e0b;
+      transform: translateY(-2px);
+    }
+
+    .btn-red {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-red:hover {
+      background: #dc2626;
+    }
+
+    .distance-line {
+      stroke: #ff0000;
+      stroke-width: 3;
+      stroke-dasharray: 5,5;
+      animation: dash 1s linear infinite;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -10;
+      }
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-left-color: #fbbf24;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="m-0 p-0 h-screen w-screen overflow-hidden font-sans bg-black">
+  
+  <!-- Loading screen wrapper -->
+  <div id="loading-screen" class="absolute inset-0">
+    <div id="pano" class="absolute inset-0 z-0"></div>
+    
+    <!-- Leaderboard Button -->
+    <button id="leaderboard-btn" onclick="showLeaderboard()" class="leaderboard-btn">
+      Leaderboard
+    </button>
+
+    <!-- Auth Panel -->
+    <div class="auth-panel">
+      <!-- Sign In Button -->
+      <button id="sign-in-btn" onclick="signInUser()" class="google-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Sign In
+      </button>
+      
+      <!-- User Info (Hidden by default) -->
+      <div id="user-info" class="user-info hidden">
+        <img id="user-avatar" class="user-avatar" />
+        <div>
+          <div id="user-name" class="font-medium text-sm"></div>
+          <button onclick="signOutUser()" class="sign-out-btn">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="auth-loading" class="google-btn hidden">
+        <div class="loading-spinner"></div>
+        Signing in...
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-white text-center space-y-6">
+      <h1 class="text-6xl font-bold drop-shadow-lg iskoguessr-title">IskoGuessr</h1>
+      <p class="text-xl opacity-90">Guess your location within the UP campus!</p>
+      <button
+        onclick="startGame('uplb')"
+        class="btn text-xl py-4 px-8"
+      >
+        Play UPLB Campus
+      </button>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game" class="hidden relative w-full h-full">
+    <!-- Fullscreen Street View -->
+    <div id="street-view" class="absolute inset-0"></div>
+    
+    <!-- Game UI Overlay -->
+    <div class="game-ui">
+      <h2 class="text-2xl font-bold">Round <span id="round-number">1</span>/5</h2>
+      <p class="text-sm opacity-80 mt-1">Click on the map to make your guess</p>
+    </div>
+
+    <!-- Score UI -->
+    <div class="score-ui">
+      <p class="text-lg">Round Score: <span id="round-score" class="font-bold text-yellow-400">0</span></p>
+      <p class="text-lg">Total Score: <span id="total-score" class="font-bold text-green-400">0</span></p>
+    </div>
+
+    <!-- Draggable Map Window -->
+    <div id="map-window" class="draggable-map" style="bottom: 20px; right: 20px;">
+      <div class="map-header">
+        <span>📍 Make your guess</span>
+        <span class="close-btn" onclick="toggleMap()">×</span>
+      </div>
+      <div id="game-map" class="map-container"></div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-ui">
+      <button id="submit-guess" onclick="submitGuess()" class="btn hidden">
+        Submit Guess
+      </button>
+      <button id="next-round" onclick="loadNextRound()" class="btn hidden">
+        Next Round
+      </button>
+      <button id="end-game" onclick="endGame()" class="btn btn-red hidden">
+        End Game
+      </button>
+      <button onclick="toggleMap()" class="btn">
+        Toggle Map
+      </button>
+    </div>
+  </div>
+</body>
+</html>
