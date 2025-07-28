@@ -14,21 +14,15 @@ IskoGuessr is a GeoGuessr-inspired game focused entirely on the University of th
 
 ## 🚧 Planned Features
 - UI improvements and animations
-- Points and distance-based scoring
 - Timer + game modes (e.g., challenge friends)
-- High scores and local storage
 - More UPLB location variety
 - Sound effects or ambient UP sounds
-- Firebase integration (for leaderboard, multiplayer, etc.)
+- Integration of all UP Campuses
 
 ---
 
 ## 🛠️ How to Run
-1. Clone the repository or download the ZIP.
-2. Open `index.html` in your browser.
-3. Play and guess!
-
----
+1.https://morkdaniel.github.io/IskoGuessr/
 
 ---
 
