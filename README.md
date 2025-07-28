@@ -22,7 +22,7 @@ IskoGuessr is a GeoGuessr-inspired game focused entirely on the University of th
 ---
 
 ## 🛠️ How to Run
-1.https://morkdaniel.github.io/IskoGuessr/
+1. https://morkdaniel.github.io/IskoGuessr/
 
 ---
 
